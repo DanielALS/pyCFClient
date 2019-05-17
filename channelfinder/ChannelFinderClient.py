@@ -15,32 +15,37 @@ from requests.packages.urllib3.poolmanager import PoolManager
 from requests import auth
 from copy import copy
 from _conf import _conf
-try: 
-    from json import JSONDecoder, JSONEncoder
-except ImportError: 
+try:
+    from json import JSONDecoder, JSONEncoder, loads
+except ImportError:
     from simplejson import JSONDecoder, JSONEncoder
-from collections import OrderedDict    
+from collections import OrderedDict
+import logging
+
+logging.getLogger(__name__)
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 
 class ChannelFinderClient(object):
     '''
-    The ChannelFinderClient provides a connection object to perform 
+    The ChannelFinderClient provides a connection object to perform
     set, update, delete and find operations.
-    
+
     TODO: Fix pydocs
     '''
 
-    __jsonheader = {'content-type':'application/json', 'accept':'application/json'}    
+    __jsonheader = {'content-type':'application/json', 'accept':'application/json'}
     __channelsResource = '/resources/channels'
     __propertiesResource = '/resources/properties'
     __tagsResource = '/resources/tags'
- 
+
     def __init__(self, BaseURL=None, username=None, password=None):
         '''
         BaseURL = the url of the channelfinder service
-        username = 
+        username =
         '''
-        try:            
+        try:
             self.__baseURL = self.__getDefaultConfig('BaseURL', BaseURL)
             self.__userName = self.__getDefaultConfig('username', username)
             self.__password = self.__getDefaultConfig('password', password)
@@ -51,7 +56,7 @@ class ChannelFinderClient(object):
             self.__session = requests.Session()
             self.__session.mount('https://localhost:8181/ChannelFinder/', Ssl3HttpAdapter())
             #self.__session.get(self.__baseURL, verify=False, headers=copy(self.__jsonheader)).raise_for_status()
- 
+
         except:
             raise Exception, 'Failed to create client to ' + self.__baseURL
 
@@ -75,39 +80,39 @@ class ChannelFinderClient(object):
         set(channels = [Channel])
         >>> set(channels=[{'name':'chName1','owner':'chOwner'},{'name':'chName2','owner':'chOwner'}])
         >>> set(channels=[{'name':'chName1','owner':'chOwner', 'tags':[...], 'properties':[...]}, {...}])
-        
+
         set(tag = Tag)
         >>> set(tag={'name':'tagName','owner':'tagOwner'})
-        
+
         set(tags = [Tag])
         >>> set(tags=[{'name':'tag1','tagOwner'},{'name':'tag2','owner':'tagOwner'}])
-        
+
         set(property = Property )
         >>> set(property={'name':'propertyName','owner':'propertyOwner'})
-        
+
         set(properties = [Property])
-        >>> set(properties=[{'name':'prop1','owner':'propOwner'},'prop2','propOwner']) 
-                   
+        >>> set(properties=[{'name':'prop1','owner':'propOwner'},'prop2','propOwner'])
+
         *** IMP NOTE: Following operation are destructive ***
         *** if you simply want to append a tag or property use the update operation***
-        
+
         set(tag=Tag, channelName=String)
         >>> set(tag={'name':'tagName','owner':'tagOwner'}, channelName='chName')
         # will create/replace specified Tag
         # and add it to the channel with the name = channelName
-        
+
         set(tag=Tag, channelNames=[String])
         >>> set (tag={'name':'tagName','owner':'tagOwner'}, channelNames=['ch1','ch2','ch3'])
-        # will create/replace the specified Tag 
+        # will create/replace the specified Tag
         # and add it to the channels with the names specified in channelNames
         # and delete it from all other channels
-        
+
         set(property=Property, channelNames=[String])
         >>> set(property={'name':'propName','owner':'propOwner','value':'propValue'}, channels=[...])
         # will create/replace the specified Property
         # and add it to the channels with the names specified in channels
         # and delete it from all other channels
-        
+
         '''
         if len(kwds) == 1:
             self.__hadleSingleAddParameter(**kwds)
@@ -115,7 +120,7 @@ class ChannelFinderClient(object):
             self.__handleMultipleAddParameters(**kwds)
         else:
             raise Exception, 'incorrect usage: '
-    
+
     def __hadleSingleAddParameter(self, **kwds):
         if 'channel' in kwds :
             r = self.__session.put(self.__baseURL + self.__channelsResource + '/' + kwds['channel'][u'name'],
@@ -208,6 +213,13 @@ class ChannelFinderClient(object):
                 ' Cause: ' + msg
         return r
 
+    def __decode_json(self, raw_string):
+        try:
+            data = loads(raw_string)
+        except:
+            logger.warn("JSON returned is not valid.")
+            return None
+
     def find(self, **kwds):
         '''
         Method allows you to query for a channel/s based on name, properties, tags
@@ -254,7 +266,7 @@ class ChannelFinderClient(object):
         if not self.__baseURL:
             raise Exception, 'Connection not created'
         if not len(kwds) > 0:
-            raise Exception, 'Incorrect usage: atleast one parameter must be specified'
+            raise Exception, 'Incorrect usage: at least one parameter must be specified'
         args = []
         for key in kwds:
             if key == 'name':
@@ -283,12 +295,13 @@ class ChannelFinderClient(object):
                          auth=self.__auth)
         try:
             r.raise_for_status()
-            return r.json()
         except:
             if r.status_code == 404:
                 return None
             else:
                 r.raise_for_status()
+
+        return self.__decode_json(r)
 
     def findTag(self, tagName):
         '''
