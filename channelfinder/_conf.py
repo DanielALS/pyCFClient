@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Internal module
 
@@ -13,16 +14,21 @@ password=MyPassword
 """
 
 def __loadConfig():
+    import logging
     import os.path
     import ConfigParser
-    dflt={'BaseURL':'http://localhost:8080/ChannelFinder'
-        }
-    cf=ConfigParser.SafeConfigParser(defaults=dflt)
-#    print os.path.normpath(os.path.expanduser('~/channelfinderapi.conf'))
-    cf.read([
-        '/etc/channelfinderapi.conf',
-        os.path.expanduser('~/channelfinderapi.conf'),
-        'channelfinderapi.conf'
-    ])
+
+    log = logging.getLogger(__name__)
+
+    dflt = {'BaseURL':'http://localhost:8080/ChannelFinder'}
+
+    cf = ConfigParser.SafeConfigParser(defaults=dflt)
+    cf.read(['/etc/channelfinderapi.conf',
+             os.path.expanduser('~/channelfinderapi.conf'),
+             'channelfinderapi.conf'
+             ])
+
+    logging.info("URL:%s" % cf.get('DEFAULT', 'BaseURL'))
     return cf
-_conf=__loadConfig()
+
+_conf = __loadConfig()
