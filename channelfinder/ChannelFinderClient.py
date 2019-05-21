@@ -216,9 +216,9 @@ class ChannelFinderClient(object):
     def __decode_json(self, raw_string):
         try:
             data = loads(raw_string)
-        except:
-            logger.warn("JSON returned is not valid.")
-            return None
+        except Exception as e:
+            msg = "{} : {}".format(e, repr(raw_string._content))
+            raise RuntimeError(msg)
 
     def find(self, **kwds):
         '''
